@@ -38,7 +38,6 @@ local BOWchecked=0
 local CinematicBar=nil
 local Menu=false
 local shootTimer=0
-local FrameRefresh=false
 
 
 local Lifebare
@@ -47,7 +46,7 @@ local path1
 local path2=0
 local path3
 local lifebarTimer=0
-local onFrameHealth
+
 
 local equipped = types.Actor.equipment(self)
 
@@ -62,8 +61,6 @@ local Yshotshell
 local Zshotshell
 local ray
 
-local ExaminedItems={}
-local CombinedItems={}
 
 ---------- override  normal controls
 interfaces.Controls.overrideMovementControls(true)
@@ -74,82 +71,6 @@ interfaces.Controls.overrideUiControls(true)
 -----------------bars cinematiques      
 ui.create({layer = 'Console',  type = ui.TYPE.Image,  props = {relativeSize = util.vector2(1, 1/7),relativePosition=util.vector2(0, 1),anchor = util.vector2(0, 1),resource = ui.texture{path ='textures/cinematic_bar.dds'},},})
 ui.create({layer = 'Console',  type = ui.TYPE.Image,  props = {relativeSize = util.vector2(1, 1/7),relativePosition=util.vector2(0, 0),anchor = util.vector2(0, 0),resource = ui.texture{path ='textures/cinematic_bar.dds'},},})
-
-
--------------examined items
-for i, book in ipairs(types.Book.records) do
-	if book.id=="examined items" then
-		ExaminedItems=util.loadCode("return("..book.text..")",{})()
-	end
-end
-
--------------Combined items
-for i, book in ipairs(types.Book.records) do
-	if book.id=="combined items" then
-		--CombinedItems=util.loadCode("return("..book.text..")",{})()
-	end
-end
-
-
-local function PositionningCamera()
-	 -------------Move camera and background
-	 if input.isActionPressed(input.ACTION.QuickKey10)==true and input.isActionPressed(input.ACTION.QuickKey9)==true then
-		if TurnLeft(-0.2)==true then
-			camerapos({CamPos=util.transform.move(util.vector3(0,-1,0))*camera.getPosition(),CamAng=util.vector2(camera.getPitch(),camera.getYaw()),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		elseif TurnRight(0.2)==true then
-			camerapos({CamPos=util.transform.move(util.vector3(0,1,0))*camera.getPosition(),CamAng=util.vector2(camera.getPitch(),camera.getYaw()),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		elseif MoveBackward(0.2)==true and input.isActionPressed(input.ACTION.QuickKey8)==true  then
-			camerapos({CamPos=util.transform.move(util.vector3(0,0,1))*camera.getPosition(),CamAng=util.vector2(camera.getPitch(),camera.getYaw()),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		elseif MoveForward(-0.2)==true and input.isActionPressed(input.ACTION.QuickKey8)==true  then
-			camerapos({CamPos=util.transform.move(util.vector3(0,0,-1))*camera.getPosition(),CamAng=util.vector2(camera.getPitch(),camera.getYaw()),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		elseif MoveBackward(0.2)==true then
-			camerapos({CamPos=util.transform.move(util.vector3(1,0,0))*camera.getPosition(),CamAng=util.vector2(camera.getPitch(),camera.getYaw()),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		elseif MoveForward(-0.2)==true then
-			camerapos({CamPos=util.transform.move(util.vector3(-1,0,0))*camera.getPosition(),CamAng=util.vector2(camera.getPitch(),camera.getYaw()),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		end	
-	elseif input.isActionPressed(input.ACTION.QuickKey10)==true then
-		if TurnLeft(-0.2)==true then
-			camerapos({CamPos=camera.getPosition(),CamAng=util.vector2(camera.getPitch(),camera.getYaw()+0.005),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		elseif TurnRight(0.2)==true then
-			camerapos({CamPos=camera.getPosition(),CamAng=util.vector2(camera.getPitch(),camera.getYaw()-0.005),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		elseif MoveBackward(0.2)==true then
-			camerapos({CamPos=camera.getPosition(),CamAng=util.vector2(camera.getPitch()+0.005,camera.getYaw()),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-		elseif MoveForward(-0.2)==true then
-			camerapos({CamPos=camera.getPosition(),CamAng=util.vector2(camera.getPitch()-0.005,camera.getYaw()),ActiveCam=activecam,ActiveBkg=activeBkg})
-			TeleportBkg()
-			end	
-		end
-end
-
-
-function TeleportBkg()
-	local position=camera.getPosition()+util.vector3(math.cos(camera:getPitch()) * math.sin(camera:getYaw())*4700, math.cos(camera:getPitch()) * math.cos(camera:getYaw())*4700,-math.sin(camera:getPitch())*4700)
-	print("___________________")
-	print("camera position : "..tostring(camera.getPosition()))
-	print("Camera Rot X : "..tostring(camera:getPitch()))
-	print("Camera Rot Z : "..tostring(camera:getYaw()))
-	print("BKG position : "..tostring(position))
-	core.sendGlobalEvent('Teleport', {actor=activeBkg, position=position, rotation=util.transform.rotateZ(camera:getYaw())*util.transform.rotateX(camera:getPitch())})
-end
-
-function camerapos(data)
-	camera.setMode(0)
-	camera.setStaticPosition(data.CamPos)
-	camera.setFieldOfView(0.7)--FieldOfView de 40
-	camera.setPitch(data.CamAng.x)
-	camera.setYaw(data.CamAng.y)
-	activecam=data.ActiveCam
-	activeBkg=data.ActiveBkg
-end
 
 
 
@@ -163,34 +84,47 @@ local function InFront(data)
 	end
 end
 
-function MoveForward(data)
+local function MoveForward(data)
 	if input.isActionPressed(input.ACTION.MoveForward)==true or input.getAxisValue(input.CONTROLLER_AXIS.LeftY)<=data then
 		return(true)
 	end
 end
 
 
-function MoveBackward(data)
+local function MoveBackward(data)
 	if input.isActionPressed(input.ACTION.MoveBackward)==true or input.getAxisValue(input.CONTROLLER_AXIS.LeftY)>=data then
 		return(true)
 	end
 end
 
-function TurnRight(data)
+local function TurnRight(data)
 	if input.isActionPressed(input.ACTION.QuickKey1)==true or input.getAxisValue(input.CONTROLLER_AXIS.LeftX)>=data then
 		return(true)
 	end
 end
 
-function TurnLeft(data)
+local function TurnLeft(data)
 	if input.isActionPressed(input.ACTION.QuickKey2)==true or input.getAxisValue(input.CONTROLLER_AXIS.LeftX)<=data then
 		return(true)
 	end
 end
 
 
+
+	
+local function camerapos(data)
+	camera.setMode(0)
+	camera.setStaticPosition(data.CamPos)
+	camera.setFieldOfView(0.7)--FieldOfView de 40
+	camera.setPitch(data.CamAng.x)
+	camera.setYaw(data.CamAng.y)
+	activecam=data.ActiveCam
+	activeBkg=data.ActiveBkg
+
+end
+
+
 local MenuSelectStop
-local iconpath
 local InventoryItems
 local InventoryItemSelected={}
 local Inventory
@@ -199,7 +133,7 @@ local PickUpItem={}
 local PickUpItemIcon
 local function ShowInventory()
 
-	I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.QuickKeys,}})
+	I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.Inventory}})
 	local InventoryContent=ui.content{}
 	local InventoryItems={}
 
@@ -252,13 +186,14 @@ end
 
 
 
-function ShowItem (item,text)
-	local ItemIcon={layer = 'Windows',  type = ui.TYPE.Image,  props = {relativeSize = util.vector2(2/3, 1/2),relativePosition=util.vector2(1/3, 1/2),anchor=(util.vector2(0,0)),resource = ui.texture{path =item.type.record(item).icon},},}
-	local Text={layer = 'Windows',type = ui.TYPE.Text, props={text = text, autoSize=true, textSize=30,textColor=util.color.rgb(1,1,1),},}
 
-	ShowItemIcon=ui.create({layer = 'Console',type = ui.TYPE.Flex, props={autoSize=false,relativeSize = util.vector2(1/2,1/2),relativePosition = util.vector2(1/3, 1/2),  anchor = util.vector2(0, 0),}, content=ui.content{ItemIcon,
-	{layer = 'Windows',type = ui.TYPE.Text,props = {text=" ",textSize=120}},Text}})
-	
+local function TeleportBkg()
+	local position=camera.getPosition()+util.vector3(math.cos(camera:getPitch()) * math.sin(camera:getYaw())*4700, math.cos(camera:getPitch()) * math.cos(camera:getYaw())*4700,-math.sin(camera:getPitch())*4700)
+	print("camera position : "..tostring(camera.getPosition()))
+	print("Camera Rot X : "..tostring(camera:getPitch()))
+	print("Camera Rot Z : "..tostring(camera:getYaw()))
+	print("BKG position : "..tostring(position))
+	core.sendGlobalEvent('Teleport', {actor=activeBkg, position=position, rotation=util.transform.rotateZ(camera:getYaw())*util.transform.rotateX(camera:getPitch())})
 end
 
 
@@ -272,17 +207,17 @@ end
 
 
 local function onUpdate()
-	------- picking items 1/2
+
 	if PickUpItem[2]==true and PickUpItem[3]==nil then
 		ShowInventory()
-		InventoryItemSelected[2]=nil
+		ui.showMessage('You Pickup '..PickUpItem[1].recordId)
 		PickUpItem[3]=true
-		ShowItem(PickUpItem[1],'You Pickup '..PickUpItem[1].recordId)
+		PickUpItemIcon=ui.create({layer = 'Windows',  type = ui.TYPE.Image,  props = {relativeSize = util.vector2(1/3, 1/4),relativePosition=util.vector2(1/3, 1/2),anchor=(util.vector2(0,0)),resource = ui.texture{path =PickUpItem[1].type.record(PickUpItem[1]).icon},},})
 	elseif PickUpItem[2]==false and PickUpItem[3]==nil then	
 		ShowInventory()
-		InventoryItemSelected[2]=nil
+		ui.showMessage("You can't pickup "..PickUpItem[1].recordId..'. Your Inventory is full.')
 		PickUpItem[3]=true
-		ShowItem(PickUpItem[1],"You can't pickup "..PickUpItem[1].recordId..'. Your Inventory is full.')
+		PickUpItemIcon=ui.create({layer = 'Windows',  type = ui.TYPE.Image,  props = {relativeSize = util.vector2(1/3, 1/4),relativePosition=util.vector2(1/3, 1/2),anchor=(util.vector2(0,0)),resource = ui.texture{path =PickUpItem[1].type.record(PickUpItem[1]).icon},},})
 	end
 		
            	
@@ -631,9 +566,7 @@ local function onUpdate()
 		TargetedBOW={}
 	end
 
-	if onFrameHealth~=types.Actor.stats.dynamic.health(self).current then
-		onFrameHealth=types.Actor.stats.dynamic.health(self).current
-	end		
+		
 
 end		
 	
@@ -646,17 +579,8 @@ end
 
 
 
-function Framewait(frametowait)
-	if frame==nil then
-		frame=0
-	elseif frame==frametowait then
-		frame=0
-		print("ok")
-		return(true)
-	else 
-		frame=frame+1
-	end
-end
+
+
 
 
 
@@ -665,17 +589,74 @@ end
 
 local function onFrame(dt)
 
-	--if Framewait(10)==true then
-		--print("ok")
-	--end
 
 
-	PositionningCamera()
 
-	---- picking item 2/2
+
+
+	 -------------Move camera and background
+	 if input.isActionPressed(input.ACTION.QuickKey10)==true and input.isActionPressed(input.ACTION.QuickKey9)==true then
+		if TurnLeft(-0.2)==true then
+			camera.setMode(0)
+			camera.setStaticPosition(util.transform.move(util.vector3(0,-1,0))*camera.getPosition())
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			TeleportBkg()
+		elseif TurnRight(0.2)==true then
+			camera.setMode(0)
+			camera.setStaticPosition(util.transform.move(util.vector3(0,1,0))*camera.getPosition())
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			TeleportBkg()
+		elseif MoveBackward(0.2)==true and input.isActionPressed(input.ACTION.QuickKey8)==true  then
+			camera.setMode(0)
+			camera.setStaticPosition(util.transform.move(util.vector3(0,0,1))*camera.getPosition())
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			TeleportBkg()
+		elseif MoveForward(-0.2)==true and input.isActionPressed(input.ACTION.QuickKey8)==true  then
+			camera.setMode(0)
+			camera.setStaticPosition(util.transform.move(util.vector3(0,0,-1))*camera.getPosition())
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			TeleportBkg()
+			TeleportBkg()
+		elseif MoveBackward(0.2)==true then
+			camera.setMode(0)
+			camera.setStaticPosition(util.transform.move(util.vector3(1,0,0))*camera.getPosition())
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			TeleportBkg()
+		elseif MoveForward(-0.2)==true then
+			camera.setMode(0)
+			camera.setStaticPosition(util.transform.move(util.vector3(-1,0,0))*camera.getPosition())
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			TeleportBkg()
+		end	
+	elseif input.isActionPressed(input.ACTION.QuickKey10)==true then
+		if TurnLeft(-0.2)==true then
+			camera.setMode(0)
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			camera.setYaw(camera:getYaw()+0.005)
+			TeleportBkg()
+		elseif TurnRight(0.2)==true then
+			camera.setMode(0)
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			camera.setYaw(camera:getYaw()-0.005)
+			TeleportBkg()
+		elseif MoveBackward(0.2)==true then
+			camera.setMode(0)
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			camera.setPitch(camera:getPitch()+0.005)
+			TeleportBkg()
+		elseif MoveForward(-0.2)==true then
+			camera.setMode(0)
+			camera.setFieldOfView(0.7)--FieldOfView de 40
+			camera.setPitch(camera:getPitch()-0.005)
+			TeleportBkg()
+			end	
+		end
+
+
+
+
 	if PickUpItem[3]==true and PickUpItem[4]~=true and (input.isActionPressed(input.ACTION.Use)==true or input.isActionPressed(input.ACTION.Inventory)==true)  then
 		ShowInventory()
-		InventoryItemSelected[2]=nil
 		PickUpItem[4]=true
 	end
 	if PickUpItem[4]==true and PickUpItem[5]~=true and input.isActionPressed(input.ACTION.Use)==false and input.isActionPressed(input.ACTION.Inventory)==false  then
@@ -683,7 +664,6 @@ local function onFrame(dt)
 	end
 	if PickUpItem[2]==true and PickUpItem[5]==true and PickUpItem[6]~=true and (input.isActionPressed(input.ACTION.Use)==true or input.isActionPressed(input.ACTION.Inventory)==true)  then
 		ShowInventory()
-		InventoryItemSelected[2]=nil
 		PickUpItem[6]=true
 	end
 	if PickUpItem[6]==true and PickUpItem[7]~=true and input.isActionPressed(input.ACTION.Use)==false and input.isActionPressed(input.ACTION.Inventory)==false  then
@@ -692,7 +672,7 @@ local function onFrame(dt)
 	if (PickUpItem[7]==true or (PickUpItem[2]==false and PickUpItem[5]==true)) and (input.isActionPressed(input.ACTION.Use)==true or input.isActionPressed(input.ACTION.Inventory)==true)  then
 		Inventory:destroy()
 		InventoryBkg:destroy()
-		ShowItemIcon:destroy()
+		PickUpItemIcon:destroy()
 		PickUpItem={}
 		I.UI.removeMode(I.UI.MODE.Interface)
 	end
@@ -700,19 +680,148 @@ local function onFrame(dt)
 
 	----------- Inventaire
 	if I.UI.getMode()=="Interface" then
+		----------Naviguer dans inventaire
+		if InventoryItemSelected[1]==nil then
+			InventoryItemSelected[1]=1
+			MenuSelectStop=false
+		end
+		if TurnLeft(-0.2)==true and InventoryItemSelected[2]==nil and InventoryItemSelected[1]~=1 and MenuSelectStop==false then
+			InventoryItemSelected[1]=InventoryItemSelected[1]-1
+			MenuSelectStop=true 
+			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[1]]))
+		elseif TurnRight(0.2)==true and InventoryItemSelected[2]==nil and InventoryItemSelected[1]~=types.NPC.getCapacity(self) and MenuSelectStop==false  then
+			InventoryItemSelected[1]=InventoryItemSelected[1]+1
+			MenuSelectStop=true 
+			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[1]]))
+		elseif MoveBackward(0.2)==true and InventoryItemSelected[2]==nil and InventoryItemSelected[1]<=(types.NPC.getCapacity(self)-2) and MenuSelectStop==false   then
+			InventoryItemSelected[1]=InventoryItemSelected[1]+2
+			MenuSelectStop=true 
+			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[1]]))
+		elseif MoveForward(-0.2)==true and InventoryItemSelected[2]==nil  and InventoryItemSelected[1]>=3 and MenuSelectStop==false  then
+			InventoryItemSelected[1]=InventoryItemSelected[1]-2
+			MenuSelectStop=true 
+			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[1]]))
+		elseif InventoryItemSelected[2]==nil and input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true then
+			InventoryItemSelected[2]=1
+			ToggleUseButton=false
+			
+			SubInventoryBkgLayout = {layer = 'Windows',type = ui.TYPE.Image,props = {size = util.vector2(ui.screenSize().x/5, ui.screenSize().y/4),
+			relativePosition = util.vector2(13/24, 1/2),
+			anchor = util.vector2(0, 0),
+			resource = ui.texture{path = "textures/Sub Menu Inventory.dds"},},}
+
+			SubInventoryBkg=ui.create(SubInventoryBkgLayout)
+
+			SubInventoryText1={layer = 'Windows',type = ui.TYPE.Text, props={text = "Equip",textSize=50,textColor=util.color.rgb(0.5,0.5,0.5)},}
+			SubInventoryText2={layer = 'Windows',type = ui.TYPE.Text, props={text = "Examine",textSize=50,textColor=util.color.rgb(1,1,1)},}
+			SubInventoryText3={layer = 'Windows',type = ui.TYPE.Text, props={text = "Drop",textSize=50,textColor=util.color.rgb(1,1,1)},}
+
+			SubInventoryTexts={layer = 'Windows',type = ui.TYPE.Flex, props={autoSize=false,relativeSize = util.vector2(1/5,1/2),
+				relativePosition = util.vector2(14/24, 1/2),  anchor = util.vector2(0, 0),}, content=ui.content{SubInventoryText1,
+				{layer = 'Windows',type = ui.TYPE.Text,props = {text=" ",textSize=35}},SubInventoryText2,
+				{layer = 'Windows',type = ui.TYPE.Text,props = {text=" ",textSize=35}},SubInventoryText3}}
+
+			SubInventory=ui.create(SubInventoryTexts)
+
+
+		elseif TurnLeft(-0.2)==nil and TurnRight(0.2)==nil and MoveBackward(0.2)==nil and MoveForward(-0.2)==nil then
+			MenuSelectStop=false 			
+		elseif ToggleUseButton==false and input.isActionPressed(input.ACTION.Use)==false then
+				ToggleUseButton=true
+		end	
+
+		if InventoryItemSelected[1] and SelectedItem then
+			SelectedItemLayout.props.relativePosition=util.vector2(3/4+1/10-(InventoryItemSelected[1]%2)*1/10,1/3+(InventoryItemSelected[1]+InventoryItemSelected[1]%2)/2*1/9-1/9)
+			SelectedItem:update()
+		end
+
+		if InventoryItemSelected[2] then
+			if MoveForward(-0.2)==true and InventoryItemSelected[2]>=3 and MenuSelectStop==false  then
+				SubInventoryTexts.content[InventoryItemSelected[2]].props.textColor=util.color.rgb(1,1,1)
+				SubInventory:update()
+				InventoryItemSelected[2]=InventoryItemSelected[2]-2
+				MenuSelectStop=true 
+				SubInventoryTexts.content[InventoryItemSelected[2]].props.textColor=util.color.rgb(0.5,0.5,0.5)
+				SubInventory:update()
+			elseif MoveBackward(0.2)==true and InventoryItemSelected[2]<=3 and MenuSelectStop==false   then
+				SubInventoryTexts.content[InventoryItemSelected[2]].props.textColor=util.color.rgb(1,1,1)
+				SubInventory:update()
+				InventoryItemSelected[2]=InventoryItemSelected[2]+2
+				MenuSelectStop=true 
+				SubInventoryTexts.content[InventoryItemSelected[2]].props.textColor=util.color.rgb(0.5,0.5,0.5)
+				SubInventory:update()
+			elseif input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true then
+					if InventoryItemSelected[2]==1 then
+						core.sendGlobalEvent('UseItem',{object=InventoryItems[InventoryItemSelected[1]],actor=self,force=true})
+						EquippedWeaponDisplay:destroy()
+						Portrait:destroy()
+						Lifebare:destroy()
+						Inventory:destroy()
+						InventoryBkg:destroy()
+						SelectedItem:destroy()
+						SubInventoryBkg:destroy()
+						SubInventory:destroy()
+						InventoryItemSelected[1]=nil
+						InventoryItemSelected[2]=nil
+						InventoryItems=ShowInventory
+					elseif InventoryItemSelected[2]==3 then
+						ui.showMessage(tostring(InventoryItems[InventoryItemSelected[1]]))
+						EquippedWeaponDisplay:destroy()
+						Portrait:destroy()
+						Lifebare:destroy()
+						Inventory:destroy()
+						InventoryBkg:destroy()
+						SelectedItem:destroy()
+						SubInventoryBkg:destroy()
+						SubInventory:destroy()
+						InventoryItemSelected[1]=nil
+						InventoryItemSelected[2]=nil
+						InventoryItems=ShowInventory
+					elseif InventoryItemSelected[2]==5 then
+						core.sendGlobalEvent('Teleport', {actor=InventoryItems[InventoryItemSelected[1]], position=self.position, rotation=nil})
+						EquippedWeaponDisplay:destroy()
+						Portrait:destroy()
+						Lifebare:destroy()
+						Inventory:destroy()
+						SubInventoryBkg:destroy()
+						SubInventory:destroy()
+						InventoryItemSelected[1]=nil
+						InventoryItemSelected[2]=nil
+						InventoryBkg:destroy()
+						SelectedItem:destroy()
+						InventoryItems=ShowInventory
+					end
+			elseif MoveBackward(0.2)==nil and MoveForward(-0.2)==nil then
+				MenuSelectStop=false 
+			elseif ToggleUseButton==false and input.isActionPressed(input.ACTION.Use)==false then
+				ToggleUseButton=true
+			end
+			--print(InventoryItemSelected[2])
+		end
+		
+		--print(InventoryItemSelected[1])
+		--print(InventoryItems[InventoryItemSelected[1]])
+
+
+
+
+
+
+
 
 	
 		if doOnceMenu == 0 then
 			doOnceMenu=1
-			MenuSelectStop=false
-			SelectedItemLayout = {layer = 'Windows',type = ui.TYPE.Image,props = {size = util.vector2(ui.screenSize().x/10, ui.screenSize().y/9),
-			relativePosition = util.vector2(3/4, 1/3),
-			anchor = util.vector2(0, 0),
-			resource = ui.texture{path = "textures/SelectedItem.dds"},},}
-			if InventoryItemSelected[2] then
+			local iconpath
+			
+			if InventoryItemSelected[1] then
+				SelectedItemLayout = {layer = 'Windows',type = ui.TYPE.Image,props = {size = util.vector2(ui.screenSize().x/10, ui.screenSize().y/9),
+					relativePosition = util.vector2(3/4, 1/3),
+					anchor = util.vector2(0, 0),
+					resource = ui.texture{path = "textures/SelectedItem.dds"},},}
+
 				SelectedItem=ui.create(SelectedItemLayout)
 			end
-
 
 			if types.Actor.getEquipment(self,16) then
 				iconpath=types.Weapon.record(types.Actor.getEquipment(self,16)).icon
@@ -724,9 +833,9 @@ local function onFrame(dt)
 			Portrait=ui.create({name="Portrait",layer = 'Windows',  type = ui.TYPE.Image,  props = {relativeSize = util.vector2(1/7, 1/5),relativePosition=util.vector2(1/8, 1/4),anchor = util.vector2(0.5, 0.5),resource = ui.texture{path ='textures/Portrait/'..tostring(types.NPC.record(self).race)..'.jpg'},},}) 
 			if types.Actor.activeEffects(self):getEffect("poison") and types.Actor.activeEffects(self):getEffect("poison").magnitude>0 then 
 				path1='textures/Lifebar/Poison/'
-			elseif (onFrameHealth/types.Actor.stats.dynamic.health(self).base) >= 0.8 then
+			elseif (types.Actor.stats.dynamic.health(self).current/types.Actor.stats.dynamic.health(self).base) >= 0.8 then
 				path1='textures/Lifebar/Fine/'
-			elseif (onFrameHealth/types.Actor.stats.dynamic.health(self).base) <= 0.3 then
+			elseif (types.Actor.stats.dynamic.health(self).current/types.Actor.stats.dynamic.health(self).base) <= 0.3 then
 				path1='textures/Lifebar/Danger/'
 			else 
 				path1='textures/Lifebar/Caution/'
@@ -742,9 +851,9 @@ local function onFrame(dt)
 				path2=1 
 				if types.Actor.activeEffects(self):getEffect("poison") and types.Actor.activeEffects(self):getEffect("poison").magnitude>0 then 
 					path1='textures/Lifebar/Poison/'
-				elseif (onFrameHealth/types.Actor.stats.dynamic.health(self).base) >= 0.8 then
+				elseif (types.Actor.stats.dynamic.health(self).current/types.Actor.stats.dynamic.health(self).base) >= 0.8 then
 					path1='textures/Lifebar/Fine/'
-				elseif (onFrameHealth/types.Actor.stats.dynamic.health(self).base) <= 0.3 then
+				elseif (types.Actor.stats.dynamic.health(self).current/types.Actor.stats.dynamic.health(self).base) <= 0.3 then
 					path1='textures/Lifebar/Danger/'
 				else 
 					path1='textures/Lifebar/Caution/'
@@ -758,188 +867,26 @@ local function onFrame(dt)
 			end
 		end
 
-
-
-		----------Naviguer dans inventaire
-
-		if InventoryItemSelected[2] and TurnLeft(-0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[2]~=1 and MenuSelectStop==false then
-			InventoryItemSelected[2]=InventoryItemSelected[2]-1
-			MenuSelectStop=true 
-			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
-		elseif InventoryItemSelected[2] and  TurnRight(0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[2]~=types.NPC.getCapacity(self) and MenuSelectStop==false  then
-			InventoryItemSelected[2]=InventoryItemSelected[2]+1
-			MenuSelectStop=true 
-			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
-		elseif InventoryItemSelected[2] and  MoveBackward(0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[2]<=(types.NPC.getCapacity(self)-2) and MenuSelectStop==false   then
-			InventoryItemSelected[2]=InventoryItemSelected[2]+2
-			MenuSelectStop=true 
-			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
-		elseif InventoryItemSelected[2] and  MoveForward(-0.2)==true and InventoryItemSelected[3]==nil  and InventoryItemSelected[2]>=3 and MenuSelectStop==false  then
-			InventoryItemSelected[2]=InventoryItemSelected[2]-2
-			MenuSelectStop=true 
-			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
-		elseif InventoryItemSelected[2] and InventoryItemSelected[3]==nil and input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true then
-			print("here")
-			InventoryItemSelected[3]=1
-			ToggleUseButton=false
-			
-			SubInventoryBkgLayout = {layer = 'Windows',type = ui.TYPE.Image,props = {size = util.vector2(ui.screenSize().x/5, ui.screenSize().y/3),
-			relativePosition = util.vector2(13/24, 1/2),
-			anchor = util.vector2(0, 0),
-			resource = ui.texture{path = "textures/Sub Menu Inventory.dds"},},}
-
-			SubInventoryBkg=ui.create(SubInventoryBkgLayout)
-
-			SubInventoryText1={layer = 'Windows',type = ui.TYPE.Text, props={text = "Equip",textSize=50,textColor=util.color.rgb(0.5,0.5,0.5)},}
-			SubInventoryText2={layer = 'Windows',type = ui.TYPE.Text, props={text = "Check",textSize=50,textColor=util.color.rgb(1,1,1)},}
-			SubInventoryText3={layer = 'Windows',type = ui.TYPE.Text, props={text = "Combine",textSize=50,textColor=util.color.rgb(1,1,1)},}
-			SubInventoryText4={layer = 'Windows',type = ui.TYPE.Text, props={text = "Drop",textSize=50,textColor=util.color.rgb(1,1,1)},}
-
-			SubInventoryTexts={layer = 'Windows',type = ui.TYPE.Flex, props={autoSize=false,relativeSize = util.vector2(1/5,1/2),
-				relativePosition = util.vector2(14/24, 1/2),  anchor = util.vector2(0, 0),}, content=ui.content{SubInventoryText1,
-				{layer = 'Windows',type = ui.TYPE.Text,props = {text=" ",textSize=35}},SubInventoryText2,
-				{layer = 'Windows',type = ui.TYPE.Text,props = {text=" ",textSize=35}},SubInventoryText3,
-				{layer = 'Windows',type = ui.TYPE.Text,props = {text=" ",textSize=35}},SubInventoryText4}}
-
-			SubInventory=ui.create(SubInventoryTexts)
-
-		elseif TurnLeft(-0.2)==nil and TurnRight(0.2)==nil and MoveBackward(0.2)==nil and MoveForward(-0.2)==nil and ToggleUseButton==true then
-			MenuSelectStop=false 			
-		end	
-
-		if InventoryItemSelected[2] and SelectedItem then
-			SelectedItemLayout.props.relativePosition=util.vector2(3/4+1/10-(InventoryItemSelected[2]%2)*1/10,1/3+(InventoryItemSelected[2]+InventoryItemSelected[2]%2)/2*1/9-1/9)
-			SelectedItem:update()
-		end
-
-		if InventoryItemSelected[3] then
-			if MoveForward(-0.2)==true and InventoryItemSelected[3]>=3 and MenuSelectStop==false  then
-				SubInventoryTexts.content[InventoryItemSelected[3]].props.textColor=util.color.rgb(1,1,1)
-				SubInventory:update()
-				InventoryItemSelected[3]=InventoryItemSelected[3]-2
-				MenuSelectStop=true 
-				SubInventoryTexts.content[InventoryItemSelected[3]].props.textColor=util.color.rgb(0.5,0.5,0.5)
-				SubInventory:update()
-			elseif MoveBackward(0.2)==true and InventoryItemSelected[3]<=5 and MenuSelectStop==false   then
-				SubInventoryTexts.content[InventoryItemSelected[3]].props.textColor=util.color.rgb(1,1,1)
-				SubInventory:update()
-				InventoryItemSelected[3]=InventoryItemSelected[3]+2
-				MenuSelectStop=true 
-				SubInventoryTexts.content[InventoryItemSelected[3]].props.textColor=util.color.rgb(0.5,0.5,0.5)
-				SubInventory:update()
-			elseif FrameRefresh==true and Framewait(3) then
-				ToggleUseButton=false
-				FrameRefresh=false
-				doOnceMenu=0
-				if ShowItemIcon then
-					ShowItemIcon:destroy()
-					ShowItemIcon=nil
-				end
-				EquippedWeaponDisplay:destroy()
-				Portrait:destroy()
-				Lifebare:destroy()
-				SelectedItem:destroy()
-				if SubInventoryBkg then
-					SubInventoryBkg:destroy()
-				end
-				if SubInventory then
-					SubInventory:destroy()
-				end
-				InventoryItemSelected[2]=1
-				InventoryItemSelected[3]=nil
-				InventoryItems=ShowInventory()
-
-			elseif input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true and FrameRefresh==false then
-					if InventoryItemSelected[3]==1 then
-						core.sendGlobalEvent('UseItem',{object=InventoryItems[InventoryItemSelected[2]],actor=self,force=true})
-						if InventoryItems[InventoryItemSelected[2]].type == types.Potion then
-							for i, effect in ipairs(types.Potion.record(InventoryItems[InventoryItemSelected[2]]).effects) do
-								print(effect.effect.id)
-								print(core.magic.EFFECT_TYPE.RestoreHealth )
-								if effect.effect.id == core.magic.EFFECT_TYPE.RestoreHealth then
-									onFrameHealth=types.Actor.stats.dynamic.health(self).current+(effect.magnitudeMin+effect.magnitudeMin)/2
-									if onFrameHealth>types.Actor.stats.dynamic.health(self).base then
-										onFrameHealth=types.Actor.stats.dynamic.health(self).base
-									end
-									print(onFrameHealth)
-
-								end
-							end
-						end
-
-						FrameRefresh=true
-
-					elseif InventoryItemSelected[3]==3 then
-
-						if input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true and ShowItemIcon then
-							FrameRefresh=true
-							print("refresh")
-							for i, item in ipairs(ExaminedItems) do
-								print("test")
-								if InventoryItems[InventoryItemSelected[2]].type.record(InventoryItems[InventoryItemSelected[2]]).id==string.lower(ExaminedItems[i][1]) then
-									core.sendGlobalEvent('RemoveItem', {Item=InventoryItems[InventoryItemSelected[2]], number=1})
-									core.sendGlobalEvent('MoveInto', {Item=nil, container=nil, actor= self, newItem=ExaminedItems[i][2]})
-								end
-							end
-						end			
-
-						if ShowItemIcon==nil then
-							ShowItem(InventoryItems[InventoryItemSelected[2]],tostring(InventoryItems[InventoryItemSelected[2]]))
-							SubInventoryBkg:destroy()
-							SubInventory:destroy()
-						end
-
-						ToggleUseButton=false
-
-					elseif InventoryItemSelected[3]==5 then
-						print("Combine")
-						FrameRefresh=true
-
-					elseif InventoryItemSelected[3]==7 then
-						core.sendGlobalEvent('Teleport', {actor=InventoryItems[InventoryItemSelected[2]], position=self.position, rotation=nil})
-						FrameRefresh=true
-					end
-					ToggleUseButton=false
-			elseif MoveBackward(0.2)==nil and MoveForward(-0.2)==nil and ToggleUseButton==true then
-				MenuSelectStop=false 
-			end
-			--print(InventoryItemSelected[3])
-		end
-		
-		--print(InventoryItemSelected[2])
-		--print(InventoryItems[InventoryItemSelected[2]])
-		if ToggleUseButton==false and input.isActionPressed(input.ACTION.Use)==false then
-			ToggleUseButton=true
-		end
-
-
-
-
-
 	elseif I.UI.getMode()==nil and doOnceMenu==1 then
 		EquippedWeaponDisplay:destroy()
 		Portrait:destroy()
 		Lifebare:destroy()
 		Inventory:destroy()
 		InventoryBkg:destroy()
-		if SelectedItem then
-			SelectedItem:destroy()
-		end
-		if InventoryItemSelected[3] then
+		SelectedItem:destroy()
+		if InventoryItemSelected[2] then
 			SubInventoryBkg:destroy()
 			SubInventory:destroy()
 		end
+		InventoryItemSelected[1]=nil
 		InventoryItemSelected[2]=nil
-		InventoryItemSelected[3]=nil
 		doOnceMenu=0
 	end
 	
 	-----------ouvrir le menu inventaire
-	if input.isActionPressed(input.ACTION.Inventory)==true and I.UI.getMode()==nil and Menu==false and types.Actor.getStance(self)==0 then-- and PickUpItem[1]==nil then
-		I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.QuickKeys,}})
+	if input.isActionPressed(input.ACTION.Inventory)==true and I.UI.getMode()==nil and Menu==false and types.Actor.getStance(self)==0 and PickUpItem[1]==nil then
+		I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.Inventory}})
 		InventoryItems=ShowInventory()
-		InventoryItemSelected[2]=1
-		ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
 	elseif input.isActionPressed(input.ACTION.Inventory)==true and I.UI.getMode() and Menu==true then
 		I.UI.removeMode(I.UI.MODE.Interface)
 	elseif input.isActionPressed(input.ACTION.Inventory)==false and I.UI.getMode() then
@@ -1000,19 +947,19 @@ local function onFrame(dt)
 	if ammochanged==true then
 		ammochanged=false
 		I.UI.removeMode(I.UI.MODE.Interface)
-		I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.QuickKeys,}})
+		I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.Inventory}})
 	end
 
 	if types.Actor.getEquipment(self,18) and (types.Actor.getEquipment(self,16)==nil or types.Weapon.record(types.Actor.getEquipment(self,16)).type~=10) then
 		ui.showMessage("You need a weapon to use ammo")
 		types.Actor.setEquipment(self,{[types.Actor.EQUIPMENT_SLOT.CarriedRight]=types.Actor.getEquipment(self,16)})
 		I.UI.removeMode(I.UI.MODE.Interface)
-		I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.QuickKeys,}})
+		I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.Inventory}})
 	elseif I.UI.getMode()=="Interface" and types.Actor.getEquipment(self,18) and types.Actor.getEquipment(self,16) and types.Weapon.record(types.Actor.getEquipment(self,16)).type==10 and core.magic.enchantments[types.Weapon.record(types.Actor.getEquipment(self,16)).enchant].charge==types.Item.getEnchantmentCharge(types.Actor.getEquipment(self,16)) and types.Actor.getEquipment(self,18).recordId==AmmunitionTypes[types.Item.itemData(types.Actor.getEquipment(self,16)).condition-10000].id then
 		ui.showMessage("Weapon full")
 		types.Actor.setEquipment(self,{[types.Actor.EQUIPMENT_SLOT.CarriedRight]=types.Actor.getEquipment(self,16)})
 		I.UI.removeMode(I.UI.MODE.Interface)
-		I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.QuickKeys,}})
+		I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.Inventory}})
  	elseif I.UI.getMode()=="Interface" and types.Actor.getEquipment(self,18) and types.Actor.getEquipment(self,16) and types.Weapon.record(types.Actor.getEquipment(self,16)).type==10 then
 		for i, ammo in pairs(AmmunitionTypes) do
 
@@ -1039,7 +986,7 @@ local function onFrame(dt)
 				
 				types.Actor.setEquipment(self,{[types.Actor.EQUIPMENT_SLOT.CarriedRight]=types.Actor.getEquipment(self,16)})
 				I.UI.removeMode(I.UI.MODE.Interface)
-				I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.QuickKeys,}})
+				I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.Inventory}})
 
 			end
 		end
@@ -1047,7 +994,7 @@ local function onFrame(dt)
 		 ui.showMessage("Wrong ammo")
 		 types.Actor.setEquipment(self,{[types.Actor.EQUIPMENT_SLOT.CarriedRight]=types.Actor.getEquipment(self,16)})
 		 I.UI.removeMode(I.UI.MODE.Interface)
-		 I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.QuickKeys,}})
+		 I.UI.setMode(I.UI.MODE.Interface, {windows = {I.UI.WINDOW.Inventory}})
 	 end
 
 

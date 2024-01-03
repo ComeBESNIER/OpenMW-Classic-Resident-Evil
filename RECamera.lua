@@ -59,9 +59,25 @@ local function Teleport(data)
 	else
 		data.actor:teleport(data.actor.cell,data.position,data.rotation)
 	end
-
 end
 
+local function MoveInto(data)
+
+	if data.newItem then
+		print(data.newItem)
+		if data.actor then
+			world.createObject(data.newItem):moveInto(types.Actor.inventory(data.actor))
+		elseif data.container then
+			world.createObject(data.newItem):moveInto(types.Container.content(data.container))
+		end
+	elseif data.Item then
+		if data.actor then
+			data.Item:moveInto(types.Actor.inventory(data.actor))
+		elseif data.container then
+			data.Item:moveInto(types.Container.content(data.container))
+		end
+	end
+end
 
 local function setCharge(data)
 	--print("setcharge"..tostring(data.Item))
@@ -95,7 +111,7 @@ end
 
 
 return {
-	eventHandlers = { PushContainer = pushContainer, Teleport=Teleport, setCharge=setCharge; RemoveItem=RemoveItem, createAmmosinInventory=createAmmosinInventory },
+	eventHandlers = { PushContainer = pushContainer, Teleport=Teleport,MoveInto=MoveInto, setCharge=setCharge; RemoveItem=RemoveItem, createAmmosinInventory=createAmmosinInventory },
     engineHandlers = {
         onUpdate = function()
 
@@ -169,25 +185,7 @@ return {
         	----------------------------
         	
         	
-
-
-			----Test projection
-			local activateRecord={id="Id",model="Meshes/Blue Herb.nif",name="Name"}
-			local bloodGrazeRecordDraft= types.Activator.createRecordDraft(activateRecord)
-			local bloodGrazeRecord=world.createRecord(bloodGrazeRecordDraft)
-			local blood=world.createObject(bloodGrazeRecord.id,1)
-			--local position=util.transform.move(0,0,70)*Player.position+Player.rotation*util.vector3(0,1,0)*100
-			--local position=Player.rotation*(Player.position+util.vector3(100,0,0)) --nop : move on X do whatever on Z
-			--local position=Player.rotation*util.vector3(100,0,0)+Player.position -- nop : point at -pi/4 on Z and don't move on X
-			--local position=Player.rotation*util.transform.move(util.vector3(100,0,0))*Player.position -- nop
-			--local position=util.vector3(0,0,100)+Player.position+util.vector3(math.cos(Player.rotation:getPitch()) * math.sin(Player.rotation:getYaw()), math.cos(Player.rotation:getPitch()) * math.cos(Player.rotation:getYaw()),-math.sin(Player.rotation:getPitch()))*100
-			--util.vector3(0,0,100)+self.position+util.vector3(math.cos(self.rotation:getPitch()) * math.sin(self.rotation:getYaw()), math.cos(self.rotation:getPitch()) * math.cos(self.rotation:getYaw()),-math.sin(self.rotation:getPitch()))*100
-			--blood : teleport(Player.cell, position)
-
-
-
-
-        	
+       	
         	
         	--print(activecam)
         	for a, room in pairs(ROOMS) do
@@ -225,7 +223,7 @@ return {
             								
             							elseif BGD.cell.name ~= activecell then				
             								BGD.enabled=false
-            								BGD=world.createObject(world.createRecord(types.Activator.createRecordDraft({id=ROOMS[a].CAMERA[b].bgd.idname,model=('meshes/bgd/'..ROOMS[a].CAMERA[b].bgd.idname..'.nif')})).id,1)
+            								BGD=world.createObject(world.createRecord(types.Activator.createRecordDraft({name=ROOMS[a].CAMERA[b].bgd.idname,model=('meshes/bgd/'..ROOMS[a].CAMERA[b].bgd.idname..'.nif')})).id,1)
             								BGD:teleport(activecell,ROOMS[a].CAMERA[b].bgd.Position,BGD.rotation*util.transform.rotateZ(ROOMS[a].CAMERA[b].bgd.Anglez)*util.transform.rotateX(ROOMS[a].CAMERA[b].bgd.Anglex))
             							       
             							       -------------- Creation des Masks
@@ -288,15 +286,17 @@ return {
             										--print(activecam)
             										CamRotation=util.vector2(ROOMS[a].CAMERA[targetcam].Pitch,ROOMS[a].CAMERA[targetcam].Yaw)
             										print(CamRotation)
-													Player:sendEvent('CameraPos', {source=Player.object, CamPos=ROOMS[a].CAMERA[targetcam].Position,CamAng=CamRotation})
 
-        										
+													        										
             										activecam=ROOMS[a].CAMERA[targetcam].Name
 			            							--print(activecam)
 			            							BGD.enabled= false
-			            							BGD=world.createObject(world.createRecord(types.Activator.createRecordDraft({id=ROOMS[a].CAMERA[targetcam].bgd.idname,model=('meshes/bgd/'..ROOMS[a].CAMERA[targetcam].bgd.idname..'.nif')})).id,1)
+			            							BGD=world.createObject(world.createRecord(types.Activator.createRecordDraft({name=ROOMS[a].CAMERA[targetcam].bgd.idname,model=('meshes/bgd/'..ROOMS[a].CAMERA[targetcam].bgd.idname..'.nif')})).id,1)
 													BGD:teleport(activecell,ROOMS[a].CAMERA[targetcam].bgd.Position,BGD.rotation*util.transform.rotateZ(ROOMS[a].CAMERA[targetcam].bgd.Anglez)*util.transform.rotateX(ROOMS[a].CAMERA[targetcam].bgd.Anglex))
             									
+													Player:sendEvent('CameraPos', {source=Player.object, CamPos=ROOMS[a].CAMERA[targetcam].Position,CamAng=CamRotation,ActiveCam=activecam,ActiveBkg=BGD})
+
+
             									            							       
             							       -------------- Creation des Masks
             										for d, msk in pairs(MSK) do
