@@ -86,7 +86,11 @@ end
 -------------Combined items
 for i, book in ipairs(types.Book.records) do
 	if book.id=="combined items" then
-		--CombinedItems=util.loadCode("return("..book.text..")",{})()
+		--CombinedItems={{"Blue Herb",1,"Green Herb",1,"Mixed Herb GB",1},}
+		CombinedItems=util.loadCode("return("..book.text..")",{})()
+		--print(CombinedItems[1][1])
+		--print(CombinedItems[2][1])
+		--print(CombinedItems[3][1])
 	end
 end
 
@@ -762,24 +766,23 @@ local function onFrame(dt)
 
 		----------Naviguer dans inventaire
 
-		if InventoryItemSelected[2] and TurnLeft(-0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[2]~=1 and MenuSelectStop==false then
+		if InventoryItemSelected[2] and TurnLeft(-0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[4]==nil and InventoryItemSelected[2]~=1 and MenuSelectStop==false then
 			InventoryItemSelected[2]=InventoryItemSelected[2]-1
 			MenuSelectStop=true 
 			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
-		elseif InventoryItemSelected[2] and  TurnRight(0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[2]~=types.NPC.getCapacity(self) and MenuSelectStop==false  then
+		elseif InventoryItemSelected[2] and  TurnRight(0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[4]==nil and InventoryItemSelected[2]~=types.NPC.getCapacity(self) and MenuSelectStop==false  then
 			InventoryItemSelected[2]=InventoryItemSelected[2]+1
 			MenuSelectStop=true 
 			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
-		elseif InventoryItemSelected[2] and  MoveBackward(0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[2]<=(types.NPC.getCapacity(self)-2) and MenuSelectStop==false   then
+		elseif InventoryItemSelected[2] and  MoveBackward(0.2)==true and InventoryItemSelected[3]==nil and InventoryItemSelected[4]==nil and InventoryItemSelected[2]<=(types.NPC.getCapacity(self)-2) and MenuSelectStop==false   then
 			InventoryItemSelected[2]=InventoryItemSelected[2]+2
 			MenuSelectStop=true 
 			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
-		elseif InventoryItemSelected[2] and  MoveForward(-0.2)==true and InventoryItemSelected[3]==nil  and InventoryItemSelected[2]>=3 and MenuSelectStop==false  then
+		elseif InventoryItemSelected[2] and  MoveForward(-0.2)==true and InventoryItemSelected[3]==nil  and InventoryItemSelected[4]==nil and InventoryItemSelected[2]>=3 and MenuSelectStop==false  then
 			InventoryItemSelected[2]=InventoryItemSelected[2]-2
 			MenuSelectStop=true 
 			ui.showMessage(tostring(InventoryItems[InventoryItemSelected[2]]))
 		elseif InventoryItemSelected[2] and InventoryItemSelected[3]==nil and input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true then
-			print("here")
 			InventoryItemSelected[3]=1
 			ToggleUseButton=false
 			
@@ -812,7 +815,60 @@ local function onFrame(dt)
 			SelectedItem:update()
 		end
 
-		if InventoryItemSelected[3] then
+
+
+
+		-----------------Naviguer dans inventaire de combine
+		if InventoryItemSelected[4] and TurnLeft(-0.2)==true and MenuSelectStop==false and InventoryItemSelected[4]~=1 then
+			InventoryItemSelected[4]=InventoryItemSelected[4]-1
+			MenuSelectStop=true 
+		elseif InventoryItemSelected[4] and  TurnRight(0.2)==true and InventoryItemSelected[4]~=types.NPC.getCapacity(self) and MenuSelectStop==false  then
+			InventoryItemSelected[4]=InventoryItemSelected[4]+1
+			MenuSelectStop=true 
+		elseif InventoryItemSelected[4] and  MoveBackward(0.2)==true and InventoryItemSelected[4]<=(types.NPC.getCapacity(self)-2) and MenuSelectStop==false   then
+			InventoryItemSelected[4]=InventoryItemSelected[4]+2
+			MenuSelectStop=true 
+		elseif InventoryItemSelected[4] and  MoveForward(-0.2)==true and InventoryItemSelected[4]>=3 and MenuSelectStop==false  then
+			InventoryItemSelected[4]=InventoryItemSelected[4]-2
+			MenuSelectStop=true 
+		elseif InventoryItemSelected[4] and input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true and InventoryItems[InventoryItemSelected[2]]~=InventoryItems[InventoryItemSelected[4]] then
+			local item1= InventoryItems[InventoryItemSelected[2]]
+			local item2=InventoryItems[InventoryItemSelected[4]]
+			local itemscombined=false
+			if item1.type==types.Weapon and  item2.type==types.Weapon and item1.record(item1).type==13 and item1.record(item1).type==13 and item1.record(item1)==item2.record(item2) then
+				print("fuse ammo")
+			else
+				for i, item in ipairs(CombinedItems) do
+					if itemscombined==false and ((item1.type.record(item1).id)==(string.lower(item[1])) and (item2.type.record(item2).id)==(string.lower(item[3]))) or ((item1.type.record(item1).id)==(string.lower(item[3])) and (item2.type.record(item2).id)==(string.lower(item[1]))) then
+						print(item1.type.record(item1).id)
+						print(string.lower(item[1]))
+						print(item2.type.record(item2).id)
+						print(string.lower(item[3]))
+						core.sendGlobalEvent('RemoveItem', {Item=item1, number=1})
+						core.sendGlobalEvent('RemoveItem', {Item=item2, number=1})
+						core.sendGlobalEvent('MoveInto', {Item=nil, container=nil, actor= self, newItem=item[5]})
+						print("combiner")
+						itemscombined=true
+					end
+				end
+			end
+			InventoryItemSelected[4]=nil
+			SelectedCombineItem:destroy()
+			ToggleUseButton=false
+			FrameRefresh=true
+		end
+
+		if InventoryItemSelected[4] and SelectedItem then
+			SelectedCombineItemLayout.props.relativePosition=util.vector2(3/4+1/10-(InventoryItemSelected[4]%2)*1/10,1/3+(InventoryItemSelected[4]+InventoryItemSelected[4]%2)/2*1/9-1/9)
+			SelectedCombineItem:update()
+		end
+
+
+
+
+
+		-----------------Naviguer dans sub Menu inventaire 
+		if InventoryItemSelected[3] and InventoryItemSelected[4]==nil then
 			if MoveForward(-0.2)==true and InventoryItemSelected[3]>=3 and MenuSelectStop==false  then
 				SubInventoryTexts.content[InventoryItemSelected[3]].props.textColor=util.color.rgb(1,1,1)
 				SubInventory:update()
@@ -849,7 +905,7 @@ local function onFrame(dt)
 				InventoryItemSelected[3]=nil
 				InventoryItems=ShowInventory()
 
-			elseif input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true and FrameRefresh==false then
+			elseif input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true and FrameRefresh==false then ---------- EQUIP
 					if InventoryItemSelected[3]==1 then
 						core.sendGlobalEvent('UseItem',{object=InventoryItems[InventoryItemSelected[2]],actor=self,force=true})
 						if InventoryItems[InventoryItemSelected[2]].type == types.Potion then
@@ -869,13 +925,11 @@ local function onFrame(dt)
 
 						FrameRefresh=true
 
-					elseif InventoryItemSelected[3]==3 then
+					elseif InventoryItemSelected[3]==3 then---------- CHECK
 
 						if input.isActionPressed(input.ACTION.Use)==true and ToggleUseButton==true and ShowItemIcon then
 							FrameRefresh=true
-							print("refresh")
 							for i, item in ipairs(ExaminedItems) do
-								print("test")
 								if InventoryItems[InventoryItemSelected[2]].type.record(InventoryItems[InventoryItemSelected[2]]).id==string.lower(ExaminedItems[i][1]) then
 									core.sendGlobalEvent('RemoveItem', {Item=InventoryItems[InventoryItemSelected[2]], number=1})
 									core.sendGlobalEvent('MoveInto', {Item=nil, container=nil, actor= self, newItem=ExaminedItems[i][2]})
@@ -891,11 +945,17 @@ local function onFrame(dt)
 
 						ToggleUseButton=false
 
-					elseif InventoryItemSelected[3]==5 then
-						print("Combine")
+					elseif InventoryItemSelected[3]==5 then ---------- COMBINE
+						SelectedCombineItemLayout = {layer = 'Windows',type = ui.TYPE.Image,props = {size = util.vector2(ui.screenSize().x/10, ui.screenSize().y/9),
+						relativePosition = util.vector2(3/4, 1/3),
+						anchor = util.vector2(0, 0),
+						resource = ui.texture{path = "textures/SelectedItemCombine.dds"},},}
+						SelectedCombineItem=ui.create(SelectedCombineItemLayout)
+						InventoryItemSelected[4]=1
+
 						FrameRefresh=true
 
-					elseif InventoryItemSelected[3]==7 then
+					elseif InventoryItemSelected[3]==7 then ---------- DROP
 						core.sendGlobalEvent('Teleport', {actor=InventoryItems[InventoryItemSelected[2]], position=self.position, rotation=nil})
 						FrameRefresh=true
 					end
