@@ -1,0 +1,21 @@
+
+import bpy
+
+for ob in bpy.context.selected_objects:
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.material.mw_create_shader()
+
+for object in bpy.data.objects:
+    print(object.active_material.name)
+    if object.active_material.name.find('njtex')>0:
+#       print(object.active_material.name[object.active_material.name.find('njtex'):])
+        path=object.active_material.name[object.active_material.name.find('njtex'):]
+    else:
+        path=object.active_material.name
+    
+    if path.find('.0')>0:
+        path=path[:path.find('.0')]
+                
+    path = '/home/come/.local/share/openmw/Biohazard Assets/Data Files/textures/3DRooms/RECV/Prison/Graveyard/' + path + '.png'
+    image = bpy.data.images.load(path)
+    object.active_material.mw.base_texture.image =image
